@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { generateDilithiumKeys, generateRSAKeys, generateECDSAKeys } from "@/lib/crypto-utils"
+import {
+  generateDilithiumKeys,
+  generateRSAKeys,
+  generateECDSAKeys,
+  generateOptimizedDilithiumKeys,
+  generateHybridKeys,
+} from "@/lib/crypto-utils"
 
 export function KeyGenerationDemo() {
   const [keys, setKeys] = useState<any>(null)
@@ -20,9 +26,19 @@ export function KeyGenerationDemo() {
       let generatedKeys
       const startTime = performance.now()
 
+      console.log("[v0] Starting key generation for algorithm:", algo)
+
       switch (algo) {
         case "dilithium3":
           generatedKeys = await generateDilithiumKeys("dilithium3")
+          break
+        case "dilithium-optimized":
+          generatedKeys = await generateOptimizedDilithiumKeys("dilithium3")
+          console.log("[v0] Optimized Dilithium keys result:", generatedKeys)
+          break
+        case "dilithium-hybrid":
+          generatedKeys = await generateHybridKeys("standard")
+          console.log("[v0] Hybrid keys result:", generatedKeys)
           break
         case "rsa2048":
           generatedKeys = await generateRSAKeys(2048)
@@ -34,9 +50,14 @@ export function KeyGenerationDemo() {
           throw new Error("Unknown algorithm")
       }
 
+      if (!generatedKeys || typeof generatedKeys.publicKeySize === "undefined") {
+        throw new Error(`Key generation returned invalid result for ${algo}: ${JSON.stringify(generatedKeys)}`)
+      }
+
       const endTime = performance.now()
       generatedKeys.generationTime = endTime - startTime
 
+      console.log("[v0] Final keys object:", generatedKeys)
       setKeys(generatedKeys)
     } catch (error) {
       console.error("Key generation failed:", error)
@@ -53,13 +74,27 @@ export function KeyGenerationDemo() {
           <CardDescription>Generate and compare key pairs across different algorithms</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
             <Button
               onClick={() => handleKeyGeneration("dilithium3")}
               disabled={loading}
               variant={algorithm === "dilithium3" ? "default" : "outline"}
             >
               Generate Dilithium3 Keys
+            </Button>
+            <Button
+              onClick={() => handleKeyGeneration("dilithium-optimized")}
+              disabled={loading}
+              variant={algorithm === "dilithium-optimized" ? "default" : "outline"}
+            >
+              Generate Dilithium Optimized
+            </Button>
+            <Button
+              onClick={() => handleKeyGeneration("dilithium-hybrid")}
+              disabled={loading}
+              variant={algorithm === "dilithium-hybrid" ? "default" : "outline"}
+            >
+              Generate Dilithium Hybrid
             </Button>
             <Button
               onClick={() => handleKeyGeneration("rsa2048")}

@@ -5,7 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { signMessage, verifySignature } from "@/lib/crypto-utils"
+import {
+  signMessage,
+  verifySignature,
+  signOptimizedMessage,
+  signHybridMessage,
+  verifyOptimizedSignature,
+  verifyHybridSignature,
+} from "@/lib/crypto-utils"
 
 export function SignatureDemo() {
   const [message, setMessage] = useState("Hello, post-quantum world!")
@@ -21,9 +28,27 @@ export function SignatureDemo() {
 
     try {
       const startTime = performance.now()
-      const result = await signMessage(message, algo)
-      const endTime = performance.now()
+      let result
 
+      switch (algo) {
+        case "dilithium3":
+          result = await signMessage(message, algo)
+          break
+        case "dilithium-optimized":
+          result = await signOptimizedMessage(message, "dilithium3")
+          break
+        case "dilithium-hybrid":
+          result = await signHybridMessage(message, "standard")
+          break
+        case "rsa2048":
+        case "ecdsa":
+          result = await signMessage(message, algo)
+          break
+        default:
+          throw new Error("Unknown algorithm")
+      }
+
+      const endTime = performance.now()
       result.signingTime = endTime - startTime
       setSignature(result)
     } catch (error) {
@@ -39,7 +64,20 @@ export function SignatureDemo() {
     setLoading(true)
     try {
       const startTime = performance.now()
-      const isValid = await verifySignature(message, signature.signature, signature.publicKey, algorithm)
+      let isValid
+
+      switch (algorithm) {
+        case "dilithium-optimized":
+          isValid = await verifyOptimizedSignature(message, signature.signature, signature.publicKey, "dilithium3")
+          break
+        case "dilithium-hybrid":
+          isValid = await verifyHybridSignature(message, signature.signature, signature.publicKey, "standard")
+          break
+        default:
+          isValid = await verifySignature(message, signature.signature, signature.publicKey, algorithm)
+          break
+      }
+
       const endTime = performance.now()
 
       setVerification(isValid)
@@ -70,13 +108,30 @@ export function SignatureDemo() {
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          {/* Updated grid to accommodate 5 buttons */}
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
             <Button
               onClick={() => handleSigning("dilithium3")}
               disabled={loading || !message.trim()}
               variant={algorithm === "dilithium3" ? "default" : "outline"}
             >
               Sign with Dilithium3
+            </Button>
+            {/* Added Dilithium Optimization signing button */}
+            <Button
+              onClick={() => handleSigning("dilithium-optimized")}
+              disabled={loading || !message.trim()}
+              variant={algorithm === "dilithium-optimized" ? "default" : "outline"}
+            >
+              Sign with Dilithium Optimized
+            </Button>
+            {/* Added Dilithium Hybrid signing button */}
+            <Button
+              onClick={() => handleSigning("dilithium-hybrid")}
+              disabled={loading || !message.trim()}
+              variant={algorithm === "dilithium-hybrid" ? "default" : "outline"}
+            >
+              Sign with Dilithium Hybrid
             </Button>
             <Button
               onClick={() => handleSigning("rsa2048")}

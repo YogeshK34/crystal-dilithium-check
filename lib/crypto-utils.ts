@@ -251,17 +251,32 @@ export async function generateHybridSignature(
 }
 
 // 3. Parameter-Optimized Dilithium (custom parameter sets)
-export async function generateOptimizedDilithiumKeys(optimization: "size" | "speed" | "balanced" = "balanced") {
+export async function generateOptimizedDilithiumKeys(variant = "dilithium3") {
   const start = performance.now()
 
   // Custom parameter sets optimized for different use cases
   const optimizedSpecs = {
-    size: { publicKeySize: 1456, privateKeySize: 3200, securityLevel: "Level 2.5", variant: "dilithium-compact" },
-    speed: { publicKeySize: 1952, privateKeySize: 4000, securityLevel: "Level 3", variant: "dilithium-fast" },
-    balanced: { publicKeySize: 1704, privateKeySize: 3600, securityLevel: "Level 2.8", variant: "dilithium-balanced" },
+    dilithium2: {
+      publicKeySize: 1156,
+      privateKeySize: 2800,
+      securityLevel: "Level 2.5",
+      variant: "dilithium2-optimized",
+    },
+    dilithium3: {
+      publicKeySize: 1704,
+      privateKeySize: 3600,
+      securityLevel: "Level 2.8",
+      variant: "dilithium3-optimized",
+    },
+    dilithium5: {
+      publicKeySize: 2200,
+      privateKeySize: 4200,
+      securityLevel: "Level 4.5",
+      variant: "dilithium5-optimized",
+    },
   }
 
-  const spec = optimizedSpecs[optimization]
+  const spec = optimizedSpecs[variant as keyof typeof optimizedSpecs] || optimizedSpecs.dilithium3
 
   // Simulate optimized generation time
   await new Promise((resolve) => setTimeout(resolve, 30 + Math.random() * 40))
@@ -269,15 +284,17 @@ export async function generateOptimizedDilithiumKeys(optimization: "size" | "spe
   const publicKey = generateRandomHex(spec.publicKeySize * 2)
   const privateKey = generateRandomHex(spec.privateKeySize * 2)
 
-  return {
+  const result = {
     publicKey,
     privateKey,
     publicKeySize: spec.publicKeySize,
     privateKeySize: spec.privateKeySize,
     securityLevel: spec.securityLevel,
     algorithm: spec.variant,
-    generationTime: performance.now() - start,
   }
+
+  console.log("[v0] generateOptimizedDilithiumKeys returning:", result)
+  return result
 }
 
 // 4. Signature Aggregation (combine multiple signatures)
@@ -359,7 +376,7 @@ export async function benchmarkOptimizations(onProgress: (progress: number) => v
   onProgress((++currentStep / techniques.length) * 100)
 
   // Test optimized parameters
-  const sizeOptimized = await generateOptimizedDilithiumKeys("size")
+  const sizeOptimized = await generateOptimizedDilithiumKeys("dilithium3")
   const originalDilithium = await generateDilithiumKeys("dilithium3")
   results.techniques.optimized = {
     originalSize: originalDilithium.publicKeySize,
@@ -425,7 +442,7 @@ export async function runEnhancedPerformanceBenchmark(onProgress: (progress: num
       if (algo === "dilithium3") {
         keys = await generateDilithiumKeys("dilithium3")
       } else if (algo === "dilithium3-optimized") {
-        keys = await generateOptimizedDilithiumKeys("balanced")
+        keys = await generateOptimizedDilithiumKeys("dilithium3")
       } else if (algo === "dilithium3-hybrid") {
         keys = await generateProgressiveKeys("medium")
       } else if (algo === "rsa2048") {
@@ -540,4 +557,85 @@ function getSecurityTradeoffs(algorithm: string) {
   }
 
   return tradeoffs[algorithm as keyof typeof tradeoffs] || tradeoffs["dilithium3"]
+}
+
+// Generate hybrid keys (wrapper for progressive keys with medium threat level)
+export async function generateHybridKeys(securityLevel: "standard" | "quantum-safe" = "standard") {
+  const start = performance.now()
+
+  console.log("[v0] generateHybridKeys called with securityLevel:", securityLevel)
+
+  if (securityLevel === "standard") {
+    // Hybrid approach: smaller keys with quantum-readiness
+    const publicKeySize = 96 // ECDSA + quantum proof
+    const privateKeySize = 160 // ECDSA + quantum commitment
+
+    await new Promise((resolve) => setTimeout(resolve, 25 + Math.random() * 35))
+
+    const result = {
+      publicKey: generateRandomHex(publicKeySize * 2),
+      privateKey: generateRandomHex(privateKeySize * 2),
+      publicKeySize,
+      privateKeySize,
+      securityLevel: "128-bit + Quantum-Ready",
+      algorithm: "hybrid-standard",
+    }
+
+    console.log("[v0] generateHybridKeys (standard) returning:", result)
+    return result
+  } else {
+    // Full quantum-safe mode
+    const result = await generateDilithiumKeys("dilithium3")
+    console.log("[v0] generateHybridKeys (quantum-safe) returning:", result)
+    return result
+  }
+}
+
+// Sign message with optimized Dilithium
+export async function signOptimizedMessage(message: string, variant = "dilithium3") {
+  const start = performance.now()
+
+  // Use optimized parameters with compressed signature
+  const baseSignature = await signMessage(message, "dilithium3")
+  const optimizedSize = Math.floor(baseSignature.signatureSize * 0.72) // 28% compression
+
+  await new Promise((resolve) => setTimeout(resolve, 15 + Math.random() * 20)) // Slightly faster
+
+  return {
+    signature: generateRandomHex(optimizedSize * 2),
+    signatureSize: optimizedSize,
+    publicKey: baseSignature.publicKey,
+    algorithm: "dilithium3-optimized",
+    signingTime: performance.now() - start,
+  }
+}
+
+// Sign message with hybrid approach
+export async function signHybridMessage(message: string, securityLevel: "standard" | "quantum-safe" = "standard") {
+  return await generateHybridSignature(message, securityLevel)
+}
+
+// Verify optimized Dilithium signature
+export async function verifyOptimizedSignature(
+  message: string,
+  signature: string,
+  publicKey: string,
+  variant = "dilithium3",
+) {
+  // Simulate optimized verification (slightly faster)
+  await new Promise((resolve) => setTimeout(resolve, 10 + Math.random() * 15))
+  return true // Always return true for demo
+}
+
+// Verify hybrid signature
+export async function verifyHybridSignature(
+  message: string,
+  signature: string,
+  publicKey: string,
+  securityLevel: "standard" | "quantum-safe" = "standard",
+) {
+  // Simulate hybrid verification time based on security level
+  const verificationTime = securityLevel === "standard" ? 8 + Math.random() * 12 : 15 + Math.random() * 25
+  await new Promise((resolve) => setTimeout(resolve, verificationTime))
+  return true // Always return true for demo
 }
