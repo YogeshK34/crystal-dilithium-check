@@ -29,6 +29,12 @@ interface WalletState {
   dilithiumPrivateKey: string
 }
 
+interface ReceiverState {
+  address: string
+  balance: string
+  balanceBeforeTx: string
+}
+
 interface Transaction {
   to: string
   value: string
@@ -47,6 +53,7 @@ interface NetworkState {
 
 export function EthereumWallet() {
   const [wallet, setWallet] = useState<WalletState | null>(null)
+  const [receiver, setReceiver] = useState<ReceiverState | null>(null)
   const [network, setNetwork] = useState<NetworkState>({
     connected: false,
     networkName: "Not Connected",
@@ -120,18 +127,49 @@ export function EthereumWallet() {
     }
   }
 
+  const checkReceiverBalance = async (address: string) => {
+    if (!network.connected || !address) return
+
+    try {
+      const balance = await getBalance(address)
+      setReceiver((prev) => ({
+        address,
+        balance,
+        balanceBeforeTx: prev?.balanceBeforeTx || balance,
+      }))
+    } catch (error) {
+      console.log("[v0] Could not fetch receiver balance")
+      setReceiver({
+        address,
+        balance: "0.0",
+        balanceBeforeTx: "0.0",
+      })
+    }
+  }
+
+  const handleToAddressChange = (address: string) => {
+    setTransaction({ ...transaction, to: address })
+    if (address && address.length === 42) {
+      checkReceiverBalance(address)
+    } else {
+      setReceiver(null)
+    }
+  }
+
   const signTransaction = async () => {
     if (!wallet) return
 
     setIsLoading(true)
     try {
-      // Create Ethereum transaction object
+      if (receiver) {
+        setReceiver((prev) => (prev ? { ...prev, balanceBeforeTx: prev.balance } : null))
+      }
+
       const txData = createEthereumTransaction({
         ...transaction,
         chainId: network.chainId || 1337,
       })
 
-      // Sign with hybrid signature (ECDSA + Quantum Commitment)
       const signature = await signHybridMessage(JSON.stringify(txData), "standard")
 
       const signedTransaction = {
@@ -157,6 +195,34 @@ export function EthereumWallet() {
     }
   }
 
+  const broadcastTransaction = async () => {
+    if (!signedTx || !network.connected) return
+
+    setIsBroadcasting(true)
+    try {
+      console.log("[v0] Broadcasting transaction to network...")
+      const hash = await sendTransaction(signedTx)
+      setTxHash(hash)
+
+      if (wallet) {
+        const newSenderBalance = Number.parseFloat(wallet.balance) - Number.parseFloat(transaction.value)
+        setWallet({ ...wallet, balance: newSenderBalance.toString() })
+      }
+
+      if (receiver) {
+        const newReceiverBalance = Number.parseFloat(receiver.balance) + Number.parseFloat(transaction.value)
+        setReceiver({ ...receiver, balance: newReceiverBalance.toString() })
+      }
+
+      alert(`✅ Transaction broadcasted! Hash: ${hash}`)
+    } catch (error) {
+      console.error("Transaction broadcast failed:", error)
+      alert("❌ Failed to broadcast transaction. Check console for details.")
+    } finally {
+      setIsBroadcasting(false)
+    }
+  }
+
   const verifyTransaction = async () => {
     if (!signedTx || !wallet) return
 
@@ -178,29 +244,6 @@ export function EthereumWallet() {
       alert(isValid ? "✅ Transaction signature is valid!" : "❌ Transaction signature is invalid!")
     } catch (error) {
       console.error("Verification failed:", error)
-    }
-  }
-
-  const broadcastTransaction = async () => {
-    if (!signedTx || !network.connected) return
-
-    setIsBroadcasting(true)
-    try {
-      console.log("[v0] Broadcasting transaction to network...")
-      const hash = await sendTransaction(signedTx)
-      setTxHash(hash)
-
-      if (wallet) {
-        const newBalance = Number.parseFloat(wallet.balance) - Number.parseFloat(transaction.value)
-        setWallet({ ...wallet, balance: newBalance.toString() })
-      }
-
-      alert(`✅ Transaction broadcasted! Hash: ${hash}`)
-    } catch (error) {
-      console.error("Transaction broadcast failed:", error)
-      alert("❌ Failed to broadcast transaction. Check console for details.")
-    } finally {
-      setIsBroadcasting(false)
     }
   }
 
@@ -350,7 +393,7 @@ export function EthereumWallet() {
                         id="to"
                         placeholder="0x..."
                         value={transaction.to}
-                        onChange={(e) => setTransaction({ ...transaction, to: e.target.value })}
+                        onChange={(e) => handleToAddressChange(e.target.value)}
                       />
                     </div>
                     <div>
@@ -421,6 +464,21 @@ export function EthereumWallet() {
                           <div className="p-2 bg-green-50 border border-green-200 rounded font-mono text-xs break-all">
                             {txHash}
                           </div>
+                        </div>
+                      )}
+
+                      {receiver && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                          <div className="font-medium">Receiver Balance: {receiver.balance} ETH</div>
+                          {receiver.balanceBeforeTx !== receiver.balance && (
+                            <div className="text-blue-600">
+                              Previous: {receiver.balanceBeforeTx} ETH → Change: +
+                              {(
+                                Number.parseFloat(receiver.balance) - Number.parseFloat(receiver.balanceBeforeTx)
+                              ).toFixed(4)}{" "}
+                              ETH
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
