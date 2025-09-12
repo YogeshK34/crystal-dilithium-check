@@ -6,6 +6,7 @@ import { SignatureDemo } from "@/components/signature-demo"
 import { PerformanceComparison } from "@/components/performance-comparison"
 import { AlgorithmInfo } from "@/components/algorithm-info"
 import { OptimizationDemo } from "@/components/optimization-demo"
+import { EthereumWallet } from "@/components/ethereum-wallet"
 
 export default function DilithiumDemo() {
   return (
@@ -20,16 +21,18 @@ export default function DilithiumDemo() {
             <Badge variant="secondary">Post-Quantum</Badge>
             <Badge variant="secondary">NIST Standardized</Badge>
             <Badge variant="secondary">ML-DSA</Badge>
+            <Badge variant="secondary">Ethereum Compatible</Badge>
           </div>
         </div>
 
         <Tabs defaultValue="info" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="info">Algorithm Info</TabsTrigger>
             <TabsTrigger value="keygen">Key Generation</TabsTrigger>
             <TabsTrigger value="signing">Signing & Verification</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="optimizations">Optimizations</TabsTrigger>
+            <TabsTrigger value="wallet">Ethereum Wallet</TabsTrigger>
           </TabsList>
 
           <TabsContent value="info">
@@ -50,6 +53,10 @@ export default function DilithiumDemo() {
 
           <TabsContent value="optimizations">
             <OptimizationDemo />
+          </TabsContent>
+
+          <TabsContent value="wallet">
+            <EthereumWallet />
           </TabsContent>
         </Tabs>
       </div>
