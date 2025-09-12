@@ -1,19 +1,25 @@
 const hre = require("hardhat")
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners()
-
-  // Get the wallet address you want to fund (replace with your generated address)
-  const walletAddress = process.argv[2]
-  const amount = process.argv[3] || "10.0"
+  const args = process.argv.slice(2)
+  const walletAddress = args[0]
+  const amount = args[1] || "10.0"
 
   if (!walletAddress) {
-    console.log("Usage: npx hardhat run scripts/fund-wallet.js --network localhost <wallet_address> [amount]")
+    console.log("Usage: npx hardhat run scripts/fund-wallet.js --network localhost -- <wallet_address> [amount]")
     console.log(
-      "Example: npx hardhat run scripts/fund-wallet.js --network localhost 0x2a919c9cd6f4128a854259ecdfccba7c651d0034 5.0",
+      "Example: npx hardhat run scripts/fund-wallet.js --network localhost -- 0x2a919c9cd6f4128a854259ecdfccba7c651d0034 5.0",
     )
+    console.log("\nNote: Use '--' before arguments to separate them from Hardhat flags")
     return
   }
+
+  if (!hre.ethers.isAddress(walletAddress)) {
+    console.error("❌ Invalid Ethereum address:", walletAddress)
+    return
+  }
+
+  const [deployer] = await hre.ethers.getSigners()
 
   console.log("Funding wallet:", walletAddress)
   console.log("Amount:", amount, "ETH")
