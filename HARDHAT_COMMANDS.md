@@ -47,7 +47,22 @@ main().catch((error) => {
 });
 \`\`\`
 
-### 4. Monitor Balance Changes
+### 4. Fund Your Generated Wallet
+\`\`\`bash
+npx hardhat run scripts/fund-wallet.js --network localhost <wallet_address> [amount]
+\`\`\`
+
+Example:
+\`\`\`bash
+npx hardhat run scripts/fund-wallet.js --network localhost 0x2a919c9cd6f4128a854259ecdfccba7c651d0034 5.0
+\`\`\`
+
+This script will:
+- Transfer ETH from Hardhat account #0 to your generated wallet
+- Show before/after balances
+- Provide transaction hash for verification
+
+### 5. Monitor Balance Changes
 \`\`\`bash
 npx hardhat console --network localhost
 \`\`\`
@@ -68,3 +83,14 @@ When you run `npx hardhat node`, you get 20 accounts each with 10,000 ETH:
 - ... and 17 more
 
 Use any of these as receiver addresses for testing!
+
+## Complete Testing Flow
+
+1. **Start Hardhat Network**: `npx hardhat node`
+2. **Generate Wallet**: Use the Next.js interface to create a new wallet
+3. **Fund Wallet**: Run `npx hardhat run scripts/fund-wallet.js --network localhost <your_wallet_address> 10.0`
+4. **Check Balance**: Run `npx hardhat run scripts/check-balance.js --network localhost` 
+5. **Send Transaction**: Use the Next.js interface to send ETH to a Hardhat account
+6. **Verify Transfer**: Check balances again to confirm the transaction worked
+
+This flow lets you test real ETH transfers with your hybrid signature wallet!

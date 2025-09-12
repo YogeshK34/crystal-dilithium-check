@@ -54,6 +54,11 @@ interface NetworkState {
 export function EthereumWallet() {
   const [wallet, setWallet] = useState<WalletState | null>(null)
   const [receiver, setReceiver] = useState<ReceiverState | null>(null)
+  const [hardhatAccounts, setHardhatAccounts] = useState<string[]>([])
+  const [selectedHardhatAccount, setSelectedHardhatAccount] = useState<string>("")
+  const [hardhatBalance, setHardhatBalance] = useState<string>("0.0")
+  const [fundingAmount, setFundingAmount] = useState<string>("10.0")
+  const [isFunding, setIsFunding] = useState(false)
   const [network, setNetwork] = useState<NetworkState>({
     connected: false,
     networkName: "Not Connected",
@@ -74,11 +79,67 @@ export function EthereumWallet() {
   const [txHash, setTxHash] = useState<string | null>(null)
   const [isBroadcasting, setIsBroadcasting] = useState(false)
 
+  const fetchHardhatAccounts = async () => {
+    if (!network.connected) return
+
+    try {
+      // Simulate fetching hardhat accounts (in real implementation, you'd call the RPC)
+      const accounts = [
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Hardhat account #0
+        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Hardhat account #1
+        "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", // Hardhat account #2
+      ]
+      setHardhatAccounts(accounts)
+      if (accounts.length > 0) {
+        setSelectedHardhatAccount(accounts[0])
+        const balance = await getBalance(accounts[0])
+        setHardhatBalance(balance)
+      }
+    } catch (error) {
+      console.error("Failed to fetch Hardhat accounts:", error)
+    }
+  }
+
+  const fundWalletFromHardhat = async () => {
+    if (!wallet || !selectedHardhatAccount || !network.connected) return
+
+    setIsFunding(true)
+    try {
+      console.log(`[v0] Funding ${wallet.address} with ${fundingAmount} ETH from ${selectedHardhatAccount}`)
+
+      // In a real implementation, you would:
+      // 1. Create a transaction from hardhat account to wallet address
+      // 2. Sign it with hardhat's private key
+      // 3. Broadcast to network
+
+      // For now, simulate the funding by updating balances
+      const currentBalance = Number.parseFloat(wallet.balance)
+      const fundAmount = Number.parseFloat(fundingAmount)
+      const newBalance = (currentBalance + fundAmount).toString()
+
+      setWallet({ ...wallet, balance: newBalance })
+
+      // Update hardhat balance
+      const currentHardhatBalance = Number.parseFloat(hardhatBalance)
+      const newHardhatBalance = (currentHardhatBalance - fundAmount - 0.001).toString() // Subtract gas
+      setHardhatBalance(newHardhatBalance)
+
+      alert(`✅ Funded wallet with ${fundingAmount} ETH from Hardhat account!`)
+    } catch (error) {
+      console.error("Funding failed:", error)
+      alert("❌ Failed to fund wallet")
+    } finally {
+      setIsFunding(false)
+    }
+  }
+
   const connectNetwork = async () => {
     setIsLoading(true)
     try {
       const networkInfo = await connectToLocalNetwork()
       setNetwork(networkInfo)
+      // Fetch Hardhat accounts after connecting
+      setTimeout(fetchHardhatAccounts, 500)
     } catch (error) {
       console.error("Network connection failed:", error)
       alert("Failed to connect to local network. Make sure Hardhat/Ganache is running on localhost:8545")
@@ -105,7 +166,7 @@ export function EthereumWallet() {
         address,
         publicKey: keys.publicKey,
         privateKey: keys.privateKey,
-        balance: "10000.0",
+        balance: "0.0", // Start with 0 ETH for real testing
         ecdsaPublicKey,
         ecdsaPrivateKey,
         dilithiumPublicKey,
@@ -117,7 +178,7 @@ export function EthereumWallet() {
           const actualBalance = await getBalance(address)
           setWallet((prev) => (prev ? { ...prev, balance: actualBalance } : null))
         } catch (error) {
-          console.log("[v0] Could not fetch balance, using default")
+          console.log("[v0] Could not fetch balance, using 0.0 ETH")
         }
       }
     } catch (error) {
@@ -363,6 +424,68 @@ export function EthereumWallet() {
                       </div>
                     </div>
                   </div>
+
+                  {network.connected && hardhatAccounts.length > 0 && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+                      <h4 className="font-medium">Fund Wallet from Hardhat Account</h4>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Hardhat Account</Label>
+                          <select
+                            className="w-full p-2 border rounded font-mono text-xs"
+                            value={selectedHardhatAccount}
+                            onChange={(e) => {
+                              setSelectedHardhatAccount(e.target.value)
+                              getBalance(e.target.value)
+                                .then(setHardhatBalance)
+                                .catch(() => setHardhatBalance("0.0"))
+                            }}
+                          >
+                            {hardhatAccounts.map((account, i) => (
+                              <option key={account} value={account}>
+                                Account #{i}: {account}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">Hardhat Balance</Label>
+                          <div className="p-2 bg-white border rounded font-mono text-sm">{hardhatBalance} ETH</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Amount to Fund (ETH)</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={fundingAmount}
+                            onChange={(e) => setFundingAmount(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="flex items-end">
+                          <Button
+                            onClick={fundWalletFromHardhat}
+                            disabled={isFunding || Number.parseFloat(fundingAmount) <= 0}
+                            className="w-full"
+                          >
+                            {isFunding ? "Funding..." : "Fund Wallet"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <Alert>
+                        <AlertDescription>
+                          💡 This simulates funding your wallet from a Hardhat account with 10K ETH. Use the
+                          check-balance.js script to verify real balances on the network.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
 
                   <Button onClick={() => setWallet(null)} variant="outline" className="w-full">
                     Generate New Wallet
