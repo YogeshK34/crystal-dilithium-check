@@ -10,13 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { generateHybridKeys, signHybridMessage, verifyHybridSignature } from "@/lib/crypto-utils"
-import {
-  createEthereumTransaction,
-  formatBytes,
-  connectToLocalNetwork,
-  getBalance,
-  sendTransaction,
-} from "@/lib/ethereum-utils"
+import { createEthereumTransaction, formatBytes, connectToLocalNetwork, getBalance } from "@/lib/ethereum-utils"
 
 interface WalletState {
   address: string
@@ -257,28 +251,64 @@ export function EthereumWallet() {
   }
 
   const broadcastTransaction = async () => {
-    if (!signedTx || !network.connected) return
+    if (!signedTx || !network.connected || !wallet) return
 
     setIsBroadcasting(true)
     try {
       console.log("[v0] Broadcasting transaction to network...")
-      const hash = await sendTransaction(signedTx)
+
+      // Create a real Ethereum transaction object
+      const ethTx = {
+        to: transaction.to,
+        value: `0x${(Number.parseFloat(transaction.value) * 1e18).toString(16)}`, // Convert ETH to Wei in hex
+        gas: `0x${Number.parseInt(transaction.gasLimit).toString(16)}`,
+        gasPrice: `0x${(Number.parseInt(transaction.gasPrice) * 1e9).toString(16)}`, // Convert Gwei to Wei in hex
+        nonce: `0x${transaction.nonce.toString(16)}`,
+        data: transaction.data || "0x",
+      }
+
+      // Send the transaction using eth_sendTransaction RPC call
+      const response = await fetch("http://localhost:8545", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: wallet.address,
+              ...ethTx,
+            },
+          ],
+          id: 1,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.error) {
+        throw new Error(result.error.message || "Transaction failed")
+      }
+
+      const hash = result.result
       setTxHash(hash)
 
-      if (wallet) {
-        const newSenderBalance = Number.parseFloat(wallet.balance) - Number.parseFloat(transaction.value)
-        setWallet({ ...wallet, balance: newSenderBalance.toString() })
-      }
+      // Refresh sender balance from network
+      const newSenderBalance = await getBalance(wallet.address)
+      setWallet({ ...wallet, balance: newSenderBalance })
 
+      // Refresh receiver balance from network
       if (receiver) {
-        const newReceiverBalance = Number.parseFloat(receiver.balance) + Number.parseFloat(transaction.value)
-        setReceiver({ ...receiver, balance: newReceiverBalance.toString() })
+        const newReceiverBalance = await getBalance(receiver.address)
+        setReceiver({ ...receiver, balance: newReceiverBalance })
       }
 
-      alert(`✅ Transaction broadcasted! Hash: ${hash}`)
+      alert(`✅ Transaction sent successfully! Hash: ${hash}`)
     } catch (error) {
       console.error("Transaction broadcast failed:", error)
-      alert("❌ Failed to broadcast transaction. Check console for details.")
+      alert(`❌ Failed to send transaction: ${error.message}`)
     } finally {
       setIsBroadcasting(false)
     }
