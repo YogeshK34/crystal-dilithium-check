@@ -171,6 +171,7 @@ export function EthereumWallet() {
         try {
           const actualBalance = await getBalance(address)
           setWallet((prev) => (prev ? { ...prev, balance: actualBalance } : null))
+          console.log(`[v0] Refreshed wallet balance: ${actualBalance} ETH`)
         } catch (error) {
           console.log("[v0] Could not fetch balance, using 0.0 ETH")
         }
@@ -372,6 +373,30 @@ export function EthereumWallet() {
     }
   }
 
+  const refreshWalletBalance = async () => {
+    if (!wallet || !network.connected) return
+
+    try {
+      const actualBalance = await getBalance(wallet.address)
+      setWallet((prev) => (prev ? { ...prev, balance: actualBalance } : null))
+      console.log(`[v0] Refreshed wallet balance: ${actualBalance} ETH`)
+    } catch (error) {
+      console.error("Failed to refresh wallet balance:", error)
+    }
+  }
+
+  const refreshReceiverBalance = async () => {
+    if (!receiver || !network.connected) return
+
+    try {
+      const actualBalance = await getBalance(receiver.address)
+      setReceiver((prev) => (prev ? { ...prev, balance: actualBalance } : null))
+      console.log(`[v0] Refreshed receiver balance: ${actualBalance} ETH`)
+    } catch (error) {
+      console.error("Failed to refresh receiver balance:", error)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -478,7 +503,19 @@ export function EthereumWallet() {
 
                     <div>
                       <Label className="text-sm font-medium">Balance</Label>
-                      <div className="p-2 bg-muted rounded font-mono text-sm">{wallet.balance} ETH</div>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-muted rounded font-mono text-sm flex-1">{wallet.balance} ETH</div>
+                        {network.connected && (
+                          <Button
+                            onClick={refreshWalletBalance}
+                            variant="outline"
+                            size="sm"
+                            className="px-2 bg-transparent"
+                          >
+                            🔄
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -656,7 +693,19 @@ export function EthereumWallet() {
 
                       {receiver && (
                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                          <div className="font-medium">Receiver Balance: {receiver.balance} ETH</div>
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">Receiver Balance: {receiver.balance} ETH</div>
+                            {network.connected && (
+                              <Button
+                                onClick={refreshReceiverBalance}
+                                variant="outline"
+                                size="sm"
+                                className="px-2 py-1 h-6 bg-transparent"
+                              >
+                                🔄
+                              </Button>
+                            )}
+                          </div>
                           {receiver.balanceBeforeTx !== receiver.balance && (
                             <div className="text-blue-600">
                               Previous: {receiver.balanceBeforeTx} ETH → Change: +
