@@ -330,15 +330,27 @@ export function EthereumWallet() {
       const hash = result.result
       setTxHash(hash)
 
-      // Refresh sender balance from network
-      const newSenderBalance = await getBalance(wallet.address)
-      setWallet({ ...wallet, balance: newSenderBalance })
+      setTimeout(async () => {
+        // Refresh sender balance from network
+        try {
+          const newSenderBalance = await getBalance(wallet.address)
+          setWallet({ ...wallet, balance: newSenderBalance })
+          console.log(`[v0] Auto-refreshed sender balance: ${newSenderBalance} ETH`)
+        } catch (error) {
+          console.error("Failed to refresh sender balance:", error)
+        }
 
-      // Refresh receiver balance from network
-      if (receiver) {
-        const newReceiverBalance = await getBalance(receiver.address)
-        setReceiver({ ...receiver, balance: newReceiverBalance })
-      }
+        // Refresh receiver balance from network
+        if (receiver) {
+          try {
+            const newReceiverBalance = await getBalance(receiver.address)
+            setReceiver({ ...receiver, balance: newReceiverBalance })
+            console.log(`[v0] Auto-refreshed receiver balance: ${newReceiverBalance} ETH`)
+          } catch (error) {
+            console.error("Failed to refresh receiver balance:", error)
+          }
+        }
+      }, 2000) // Wait 2 seconds for transaction to be mined
 
       alert(`✅ Transaction sent successfully! Hash: ${hash}`)
     } catch (error) {

@@ -89,6 +89,7 @@ Transaction Signing:
 - **Signature Operations**: Real-time signing and verification demos
 - **Optimization Techniques**: Production-ready size reduction methods
 - **Security Analysis**: Comprehensive trade-off evaluation
+- **Ethereum Wallet Setup**: Integration with local Ethereum network for testing
 
 ## 🔬 Optimization Techniques Implemented
 
@@ -131,3 +132,53 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## 🛠 Ethereum Wallet Setup
+
+### Prerequisites
+1. **Node.js** (v16 or higher)
+2. **Hardhat** for local Ethereum network
+
+### Quick Start
+
+1. **Start Local Network**
+   \`\`\`bash
+   npx hardhat node
+   \`\`\`
+
+2. **Fund Your Wallet** (from Hardhat directory)
+   \`\`\`bash
+   # Set environment variables and run funding script
+   RECEIVER=0x91064ec806bf90af1f5157ed1b03686fe1a5d434 AMOUNT=500.0 node scripts/fund-wallet.js
+   \`\`\`
+
+3. **Check Balances**
+   \`\`\`bash
+   # Verify wallet balances on network
+   node scripts/check-balance.js
+   \`\`\`
+
+4. **Test Complete Flow**
+   - Generate wallet in Next.js UI (starts with 0 ETH)
+   - Fund wallet using Hardhat script
+   - Verify balance in UI (click refresh 🔄)
+   - Send transactions through UI
+   - Verify final balances
+
+### Wallet Testing Commands
+
+\`\`\`bash
+# Fund any wallet address with test ETH
+RECEIVER=<wallet_address> AMOUNT=<eth_amount> node scripts/fund-wallet.js
+
+# Check balance of any address
+node scripts/check-balance.js <wallet_address>
+
+# Check all Hardhat account balances
+node scripts/check-balance.js
+\`\`\`
+
+### Network Configuration
+- **Local Network**: http://localhost:8545
+- **Chain ID**: 31337 (Hardhat default)
+- **Test Accounts**: 20 accounts with 10,000 ETH each
