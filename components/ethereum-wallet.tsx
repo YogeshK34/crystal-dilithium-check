@@ -10,7 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { generateHybridKeys, signHybridMessage, verifyHybridSignature } from "@/lib/crypto-utils"
-import { createEthereumTransaction, formatBytes, connectToLocalNetwork } from "@/lib/ethereum-utils"
+import {
+  createEthereumTransaction,
+  formatBytes,
+  connectToLocalNetwork,
+  getBalance,
+  sendTransaction,
+} from "@/lib/ethereum-utils"
 
 interface WalletState {
   address: string
@@ -49,7 +55,7 @@ export function EthereumWallet() {
   })
   const [transaction, setTransaction] = useState<Transaction>({
     to: "",
-    value: "0.1",
+    value: "5.0",
     gasLimit: "21000",
     gasPrice: "20",
     nonce: 0,
@@ -58,6 +64,8 @@ export function EthereumWallet() {
   const [signedTx, setSignedTx] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showPrivateKeys, setShowPrivateKeys] = useState(false)
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [isBroadcasting, setIsBroadcasting] = useState(false)
 
   const connectNetwork = async () => {
     setIsLoading(true)
@@ -90,7 +98,7 @@ export function EthereumWallet() {
         address,
         publicKey: keys.publicKey,
         privateKey: keys.privateKey,
-        balance: "10.0", // Will be updated from network
+        balance: "10000.0",
         ecdsaPublicKey,
         ecdsaPrivateKey,
         dilithiumPublicKey,
@@ -98,8 +106,12 @@ export function EthereumWallet() {
       })
 
       if (network.connected) {
-        // In a real implementation, you'd query the network for balance
-        console.log("[v0] Would query balance for address:", address)
+        try {
+          const actualBalance = await getBalance(address)
+          setWallet((prev) => (prev ? { ...prev, balance: actualBalance } : null))
+        } catch (error) {
+          console.log("[v0] Could not fetch balance, using default")
+        }
       }
     } catch (error) {
       console.error("Wallet generation failed:", error)
@@ -166,6 +178,29 @@ export function EthereumWallet() {
       alert(isValid ? "✅ Transaction signature is valid!" : "❌ Transaction signature is invalid!")
     } catch (error) {
       console.error("Verification failed:", error)
+    }
+  }
+
+  const broadcastTransaction = async () => {
+    if (!signedTx || !network.connected) return
+
+    setIsBroadcasting(true)
+    try {
+      console.log("[v0] Broadcasting transaction to network...")
+      const hash = await sendTransaction(signedTx)
+      setTxHash(hash)
+
+      if (wallet) {
+        const newBalance = Number.parseFloat(wallet.balance) - Number.parseFloat(transaction.value)
+        setWallet({ ...wallet, balance: newBalance.toString() })
+      }
+
+      alert(`✅ Transaction broadcasted! Hash: ${hash}`)
+    } catch (error) {
+      console.error("Transaction broadcast failed:", error)
+      alert("❌ Failed to broadcast transaction. Check console for details.")
+    } finally {
+      setIsBroadcasting(false)
     }
   }
 
@@ -374,11 +409,20 @@ export function EthereumWallet() {
                           Verify Signature
                         </Button>
                         {network.connected && (
-                          <Button variant="default" disabled>
-                            Broadcast to Network
+                          <Button onClick={broadcastTransaction} disabled={isBroadcasting} variant="default">
+                            {isBroadcasting ? "Broadcasting..." : "Broadcast to Network"}
                           </Button>
                         )}
                       </div>
+
+                      {txHash && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Transaction Hash</Label>
+                          <div className="p-2 bg-green-50 border border-green-200 rounded font-mono text-xs break-all">
+                            {txHash}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
