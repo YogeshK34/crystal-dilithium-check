@@ -11,7 +11,7 @@ Then in the console:
 const accounts = await ethers.getSigners()
 for (let i = 0; i < accounts.length; i++) {
   const balance = await ethers.provider.getBalance(accounts[i].address)
-  console.log(`Account ${i}: ${accounts[i].address} - ${ethers.utils.formatEther(balance)} ETH`)
+  console.log(`Account ${i}: ${accounts[i].address} - ${ethers.formatEther(balance)} ETH`)
 }
 \`\`\`
 
@@ -22,7 +22,7 @@ npx hardhat console --network localhost
 Then:
 \`\`\`javascript
 const balance = await ethers.provider.getBalance("0xYourAddressHere")
-console.log(`Balance: ${ethers.utils.formatEther(balance)} ETH`)
+console.log(`Balance: ${ethers.formatEther(balance)} ETH`)
 \`\`\`
 
 ### 3. One-liner Balance Check
@@ -32,16 +32,19 @@ npx hardhat run --network localhost scripts/check-balance.js
 
 Create `scripts/check-balance.js`:
 \`\`\`javascript
+const { ethers } = require("hardhat");
+
 async function main() {
-  const [deployer] = await ethers.getSigners()
-  const balance = await ethers.provider.getBalance(deployer.address)
-  console.log("Account balance:", ethers.utils.formatEther(balance), "ETH")
+  const [deployer] = await ethers.getSigners();
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log("Account balance:", ethers.formatEther(balance), "ETH");
+  console.log("Account address:", deployer.address);
 }
 
 main().catch((error) => {
-  console.error(error)
-  process.exitCode = 1
-})
+  console.error(error);
+  process.exitCode = 1;
+});
 \`\`\`
 
 ### 4. Monitor Balance Changes
@@ -53,7 +56,7 @@ Then:
 const address = "0xYourReceiverAddress"
 setInterval(async () => {
   const balance = await ethers.provider.getBalance(address)
-  console.log(`${new Date().toISOString()}: ${ethers.utils.formatEther(balance)} ETH`)
+  console.log(`${new Date().toISOString()}: ${ethers.formatEther(balance)} ETH`)
 }, 5000) // Check every 5 seconds
 \`\`\`
 
